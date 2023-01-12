@@ -21,17 +21,30 @@ class plInfo:
     music_lib = f''
     pl_folder = f''
     new_folder = f''
+    ext = '.m3u'
     default_labels = {'music_lib': 'Music Library',
                       'pl_folder': 'Playlist folder',
                       'new_folder': 'Export Folder'}
+    paths = {'music_lib': music_lib,
+             'pl_folder': pl_folder,
+             'new_folder': new_folder}
+    extensions = {0:    f'.m3u',
+                  1:    f'.m3u8'}
 
-    def check_input(self, key: str, string: str):
+
+    def update_path(self, key: str, string: str):
         if string == '' or string is None:
-            self.music_lib = self.default_labels[key]
+            self.paths[key] = self.default_labels[key]
         else:
-            self.music_lib = string
+            self.paths[key] = string
 
-        return self.music_lib
+        return self.paths[key]
+
+    def update_ext(self, key: int):
+        try:
+            self.ext = self.extensions[key]
+        except KeyError:
+            print('Bad extension!')
 
 def impl_glfw_init(window_name="minimal ImGui/GLFW3 example", width=1280, height=720):
     if not glfw.init():
@@ -75,6 +88,7 @@ class GUI(object):
     def loop(self):
 
         self.path_inf = plInfo
+        ext_num = 0
 
         while not glfw.window_should_close(self.window):
             glfw.poll_events()
@@ -111,6 +125,14 @@ class GUI(object):
                  self.path_inf.music_lib = pfd.select_folder('Select Export Path').result()
             _, self.path_inf.new_folder = imgui.input_text("Write Path", self.path_inf.new_folder, 256)
             imgui.end_group()
+
+            imgui.columns(1)
+
+            clicked, ext_num = imgui.combo('Extension', ext_num, [f'.m3u', f'.m3u8'])
+            if clicked:
+                self.path_inf.update_ext(self.path_inf, ext_num)
+
+            imgui.spacing()
 
             if imgui.button("Exit"):
                 exit(0)
