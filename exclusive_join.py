@@ -41,7 +41,7 @@ def write_playlist(tracks,name):
 
 # filename = askopenfilename(title="Select main playlist folder")
 # path1 = os.path.dirname(filename)
-path1 = "E:\Music\Playlists"
+path1 = "E:\Music\Playlists\All.m3u"
 
 contents1 = os.listdir(path1)
 

@@ -7,63 +7,83 @@ Created on Sun Dec  1 21:40:48 2019
 
 import os
 import io
+import sys
+import yaml
 
-def repath_playlists(music_lib: str, read_path: str, export_path: str, ext: str):
+class playlistObj:
+    def __init__(self, config_path):
+        self.config_path = config_path
+        self.divider = "//"
+        if sys.platform == "win32":
+            self.divider = "\\"
 
-    # filename = askopenfilename(title="Select main playlist folder (save new playlists there)")
-    # o_path = pfd.select_folder('').result()
-    # o_path = os.path.dirname(filename)
+        self.importConfig()
 
-    #dirs = os.listdir(o_path)
+    def importConfig(self):
 
-    for file in os.listdir(read_path):
-        ext_l = 4
+        with open(self.config_path, "r") as stream:
+            config = yaml.safe_load(stream)
 
-        if 'Test' in file:
-            continue
+        paths = config["paths"]
 
-        if '.m3u' == file[-4:]:
+        self.new_path = paths["new"]
+        self.old_path = paths["old"]
+        self.extension = config["extension"]
+
+        if "lib" in paths:
+            self.library_path = paths["lib"]
+
+
+
+    def repathPlaylist(self):
+
+        #dirs = os.listdir(o_path)
+
+        for file in os.listdir(self.old_path):
             ext_l = 4
-        elif '.m3u8' == file[-5:]:
-            ext_l = 5
-        else:
-            continue
 
-        print(file)
+            if 'Test' in file:
+                continue
 
-        out_file_path = f'{export_path}/{file[:-ext_l]}{ext}'
+            if '.m3u' == file[-4:]:
+                ext_l = 4
+            elif '.m3u8' == file[-5:]:
+                ext_l = 5
+            else:
+                continue
 
-        open_file = f'{playlist_path}{file}'
-        with io.open(open_file, errors='ignore') as f:
-            with open(out_file_path, "w") as g:
+            print(file)
 
-                if ext == '.m3u8':
-                    g.write('#\n')
+            out_file_path = f'{self.new_path}/{file[:-ext_l]}{self.extension}'
 
-                for line in f:
+            open_file = f'{self.old_path}{file}'
+            with io.open(open_file, errors='ignore') as f:
+                with open(out_file_path, "w") as g:
 
-                    if '/' not in line and '\\' not in line:
-                        continue
+                    if self.extension == '.m3u8':
+                        g.write('#\n')
 
-                    line = line.replace('\n', '')
-                    line = line.replace('\r', '')
-                    if line.count('\\') > 2 or line.count('/') > 2:
-                        album = f'{line[line.find("Albums") + len("Albums") + 1:]}\n'
-                    else:
-                        album = line + '\n'
+                    for line in f:
 
-                    if '/' not in line:
-                        album = album.replace('\\', os.sep)
+                        if '/' not in line and '\\' not in line:
+                            continue
 
-                    g.write(f'{music_lib}{album}')
+                        line = line.replace('\n', '')
+                        line = line.replace('\r', '')
+                        if line.count('\\') > 2 or line.count('/') > 2:
+                            album = f'{line[line.find("Albums") + len("Albums") + 1:]}\n'
+                        else:
+                            album = line + '\n'
 
-        f.close()
+                        if '/' not in line:
+                            album = album.replace('\\', os.sep)
+
+                        g.write(f'{self.library_path}{album}')
+
+            f.close()
 
 
 if __name__ == "__main__":
-    music_lib = f'/media/disc1/Music/Albums/'
-    playlist_path = f'/home/shjewell/Music/Mobile Playlists/'
-    export_path = f'/home/shjewell/Music/New/'
-    pl_ext = '.m3u'
+    config = "reorient_config.yml"
 
-    repath_playlists(music_lib, playlist_path, export_path, pl_ext)
+    playlist = playlistObj(config)
