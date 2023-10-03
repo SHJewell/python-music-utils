@@ -1,0 +1,12 @@
+paths:
+  old: E:\Music\Playlists\From Mobile
+  new: E:\Music\Playlists\Desktop
+  old_lib:
+  new_lib: E:\Music\Albums
+extension:
+  input: m3u
+  export: m3u
+meta:
+  export delim: \
+  skip:
+    test

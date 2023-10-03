@@ -9,13 +9,87 @@ import os
 import io
 import sys
 import yaml
+import logging
+import re
 
 class playlistObj:
+    def __init__(self, path, ext):
+        self.path = path
+        self.extension = ext
+        self.raw_content = []
+        self.obj_paths = []
+        self.music_file_objs = {}
+        self.updated_content = []
+
+        self.sys_divider = "//"
+        if sys.platform == "win32":
+            self.sys_divider = "\\"
+
+
+    def readPlaylist(self):
+
+        current_Obj = "header"
+
+        with open(self.path, "r") as original:
+            for line_number, line in enumerate(original, start=1):
+                line = line.strip()  # Remove leading/trailing whitespace and newline characters
+                self.raw_content.append(line)
+                if self.sys_divider in line:
+                    current_Obj = line
+                    self.obj_paths.append(line)
+
+                self.music_file_objs.setdefault(current_Obj, []).append(line)  #appends to list whether it exists or not
+
+
+    def _repath_m3u(self):
+
+        for media_file in self.obj_paths:
+            line = media_file.replace('\n', '')
+            line = line.replace('\r', '')
+            self.updated_content.append(line.replace(self.orig_path, self.new_path))
+
+
+    def _repath_m3u8(self):
+        """
+        TODO:
+            Add in m3u8 EXT stuff...?
+
+        """
+
+        self.updated_content = ["#"]
+
+        for line in self.raw_content:
+            if self.sys_divider in line:
+                line = line.replace('\n', '')
+                line = line.replace('\r', '')
+                self.updated_content.append(line.replace(self.orig_path, self.new_path))
+            elif line == "#":
+                continue
+            else:
+                self.updated_content.append(line)
+
+
+    def repathPlaylist(self, orig_path, new_path):
+        self.orig_path = orig_path
+        self.new_path = new_path
+
+        if self.extension == "m3u":
+            self._repath_m3u()
+        if self.extension == "m3u8":
+            self._repath_m3u8()
+
+        return self.updated_content
+
+
+class playlistCollection:
     def __init__(self, config_path):
         self.config_path = config_path
-        self.divider = "//"
+        self.repath_flag = True
+        self.read_ext = "m3u"
+        self.sys_divider = "//"
         if sys.platform == "win32":
-            self.divider = "\\"
+            self.sys_divider = "\\"
+        self.skip_list = []
 
         self.importConfig()
 
@@ -30,60 +104,48 @@ class playlistObj:
         self.old_path = paths["old"]
         self.extension = config["extension"]
 
-        if "lib" in paths:
-            self.library_path = paths["lib"]
+        if "old_lib" in paths:
+            self.old_library_path = paths["old_lib"]
+
+        if "new_lib" in paths:
+            self.old_library_path = paths["new_lib"]
+            self.repath_flag = True
+
+        self.skip_list = [item.lower() for item in config["meta"]["skip"]]
+
+        self.target_divider = config["meta"]["export delim"]
 
 
+    def repathCollection(self):
 
-    def repathPlaylist(self):
+        collection = os.listdir(self.old_path)
 
-        #dirs = os.listdir(o_path)
+        for file in os.listdir(collection):
 
-        for file in os.listdir(self.old_path):
-            ext_l = 4
-
-            if 'Test' in file:
+            if any(item in file for item in self.skip):
                 continue
 
-            if '.m3u' == file[-4:]:
-                ext_l = 4
-            elif '.m3u8' == file[-5:]:
-                ext_l = 5
+            if '.m3u' == os.path.splittext(file)[-1]:
+                self.read_ext = "m3u"
+            elif '.m3u8' == os.path.splittext(file)[-1]:
+                self.read_ext = "m3u8"
             else:
                 continue
 
-            print(file)
+            playlist = playlistObj(file, self.read_ext)
+            playlist.readPlaylist()
+            new_playlist = playlist.repathPlaylist(self.old_path, self.new_path)
 
-            out_file_path = f'{self.new_path}/{file[:-ext_l]}{self.extension}'
+            with open()
 
-            open_file = f'{self.old_path}{file}'
-            with io.open(open_file, errors='ignore') as f:
-                with open(out_file_path, "w") as g:
 
-                    if self.extension == '.m3u8':
-                        g.write('#\n')
-
-                    for line in f:
-
-                        if '/' not in line and '\\' not in line:
-                            continue
-
-                        line = line.replace('\n', '')
-                        line = line.replace('\r', '')
-                        if line.count('\\') > 2 or line.count('/') > 2:
-                            album = f'{line[line.find("Albums") + len("Albums") + 1:]}\n'
-                        else:
-                            album = line + '\n'
-
-                        if '/' not in line:
-                            album = album.replace('\\', os.sep)
-
-                        g.write(f'{self.library_path}{album}')
-
-            f.close()
 
 
 if __name__ == "__main__":
     config = "reorient_config.yml"
 
-    playlist = playlistObj(config)
+    playlist = playlistCollection(config)
+
+    # playlist = playlistObj("E:\\Music\\Playlists\\From Mobile\\New.m3u8", "m3u8")
+    # playlist.readPlaylist()
+    # print(playlist.path)
