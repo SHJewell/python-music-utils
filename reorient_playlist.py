@@ -30,16 +30,23 @@ class playlistObj:
     def readPlaylist(self):
 
         current_Obj = "header"
+        try:
+            with open(self.path, "r", errors="ignore") as original:
+                for line_number, line in enumerate(original, start=1):
+                    line = line.strip()  # Remove leading/trailing whitespace and newline characters
+                    self.raw_content.append(line)
+                    if self.sys_divider in line:
+                        current_Obj = line
+                        self.obj_paths.append(line)
 
-        with open(self.path, "r") as original:
-            for line_number, line in enumerate(original, start=1):
-                line = line.strip()  # Remove leading/trailing whitespace and newline characters
-                self.raw_content.append(line)
-                if self.sys_divider in line:
-                    current_Obj = line
-                    self.obj_paths.append(line)
 
-                self.music_file_objs.setdefault(current_Obj, []).append(line)  #appends to list whether it exists or not
+                    self.music_file_objs.setdefault(current_Obj, []).append(line)  #appends to list whether it exists or not
+
+        except UnicodeDecodeError:
+            logging.error("Bad unicode in %s, line %d" % (self.path, line_number))
+            logging.error("     %s" % line)
+            logging.error("Continuing...")
+            pass
 
     def _repathLine(self, line):
         line = line.strip()
@@ -145,7 +152,7 @@ class playlistCollection:
             logging.info("Converting %s" % file)
 
             playlist = playlistObj(os.path.join(self.old_path, file), self.extension["export"])
-             playlist.readPlaylist()
+            playlist.readPlaylist()
             new_playlist = playlist.repathPlaylist(self.old_library_path, self.new_library_path)
 
             new_file_name = os.path.join(self.new_path, f"{os.path.splitext(file)[0]}.{self.extension['export']}")
@@ -160,7 +167,8 @@ class playlistCollection:
 
 if __name__ == "__main__":
 
-    config = "reorient_config.yml"
+    #config = "reorient_config.yml"
+    config = "mm_config.yml"
 
     playlist = playlistCollection(config)
     playlist.repathCollection()
