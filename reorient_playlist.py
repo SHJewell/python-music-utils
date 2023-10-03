@@ -10,7 +10,8 @@ import io
 import sys
 import yaml
 import logging
-import re
+
+logging.basicConfig(level=logging.DEBUG)
 
 class playlistObj:
     def __init__(self, path, ext):
@@ -40,14 +41,21 @@ class playlistObj:
 
                 self.music_file_objs.setdefault(current_Obj, []).append(line)  #appends to list whether it exists or not
 
+    def _repathLine(self, line):
+        line = line.strip()
+
+        if self.orig_path is None:
+            self.updated_content.append(os.path.join(self.new_path, line))
+        elif self.new_path is None:
+            self.updated_content.append(line.replace(self.orig_path, ""))
+        else:
+            self.updated_content.append(line.replace(self.orig_path, self.new_path))
+
 
     def _repath_m3u(self):
 
         for media_file in self.obj_paths:
-            line = media_file.replace('\n', '')
-            line = line.replace('\r', '')
-            self.updated_content.append(line.replace(self.orig_path, self.new_path))
-
+            self._repathLine(media_file)
 
     def _repath_m3u8(self):
         """
@@ -60,9 +68,7 @@ class playlistObj:
 
         for line in self.raw_content:
             if self.sys_divider in line:
-                line = line.replace('\n', '')
-                line = line.replace('\r', '')
-                self.updated_content.append(line.replace(self.orig_path, self.new_path))
+                self._repathLine(line)
             elif line == "#":
                 continue
             else:
@@ -84,7 +90,6 @@ class playlistObj:
 class playlistCollection:
     def __init__(self, config_path):
         self.config_path = config_path
-        self.repath_flag = True
         self.read_ext = "m3u"
         self.sys_divider = "//"
         if sys.platform == "win32":
@@ -95,56 +100,70 @@ class playlistCollection:
 
     def importConfig(self):
 
+        logging.debug("Importing config %s" % self.config_path)
+
         with open(self.config_path, "r") as stream:
             config = yaml.safe_load(stream)
 
         paths = config["paths"]
 
-        self.new_path = paths["new"]
-        self.old_path = paths["old"]
+        self.old_path = paths["read"]
+        self.new_path = paths["export"]
         self.extension = config["extension"]
 
-        if "old_lib" in paths:
-            self.old_library_path = paths["old_lib"]
+        logging.debug("Will convert %s playists to %s as %s" % (self.old_path, self.new_path, self.extension))
 
-        if "new_lib" in paths:
-            self.old_library_path = paths["new_lib"]
-            self.repath_flag = True
+        self.old_library_path = paths["old_lib"]
+        self.new_library_path = paths["new_lib"]
+
+        logging.debug("Will change %s library to %s" % (self.old_library_path, self.new_library_path))
 
         self.skip_list = [item.lower() for item in config["meta"]["skip"]]
+
+        logging.debug("Will skip playlists containing the following words:")
+
+        for item in self.skip_list:
+            logging.debug("     %s" % item)
 
         self.target_divider = config["meta"]["export delim"]
 
 
     def repathCollection(self):
 
-        collection = os.listdir(self.old_path)
+        for file in os.listdir(self.old_path):
 
-        for file in os.listdir(collection):
-
-            if any(item in file for item in self.skip):
+            if any(item in file for item in self.skip_list):
                 continue
 
-            if '.m3u' == os.path.splittext(file)[-1]:
+            if '.m3u' == os.path.splitext(file)[-1]:
                 self.read_ext = "m3u"
-            elif '.m3u8' == os.path.splittext(file)[-1]:
+            elif '.m3u8' == os.path.splitext(file)[-1]:
                 self.read_ext = "m3u8"
             else:
                 continue
 
-            playlist = playlistObj(file, self.read_ext)
-            playlist.readPlaylist()
-            new_playlist = playlist.repathPlaylist(self.old_path, self.new_path)
+            logging.info("Converting %s" % file)
 
-            with open()
+            playlist = playlistObj(os.path.join(self.old_path, file), self.extension["export"])
+             playlist.readPlaylist()
+            new_playlist = playlist.repathPlaylist(self.old_library_path, self.new_library_path)
 
+            new_file_name = os.path.join(self.new_path, f"{os.path.splitext(file)[0]}.{self.extension['export']}")
 
+            logging.debug("Writing file to %s" % new_file_name)
+
+            with open(new_file_name, "w") as new_file:
+                for line in new_playlist:
+                    new_file.write(line)
+                    new_file.write("\n")
 
 
 if __name__ == "__main__":
+
     config = "reorient_config.yml"
 
     playlist = playlistCollection(config)
+    playlist.repathCollection()
 
     # playlist = playlistObj("E:\\Music\\Playlists\\From Mobile\\New.m3u8", "m3u8")
     # playlist.readPlaylist()
