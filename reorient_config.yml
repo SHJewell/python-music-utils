@@ -1,12 +1,12 @@
 paths:
-  read: E:\Music\Playlists\From Mobile
-  export: E:\Music\Playlists\Desktop
-  old_lib:
-  new_lib: E:\Music\Albums
+    read: E:\Music\Playlists\From Mobile
+    export: E:\Music\Playlists\Desktop
+    old_lib:
+    new_lib: E:\Music\Albums
 extension:
-  input: m3u
-  export: m3u
+    input: m3u
+    export: m3u
 meta:
-  export delim: \
-  skip:
-    - test
+    export delim: \
+    skip:
+        - test
