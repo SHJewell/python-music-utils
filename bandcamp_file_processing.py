@@ -1,16 +1,18 @@
 import os
 import logging
 import zipfile
+import shutil
 
 logging.basicConfig(level=logging.DEBUG)
 
 class bandcampRawZip:
-    def __init__(self, path, library):
+    def __init__(self, path: str, library: str):
         self.zip_path = path
         self.lib_path = library
+        self.new_folder: str
 
 
-    def extract_zip(self, zip_path, output_folder):
+    def extract_zip(self):
         """
         Extract files from a .zip archive.
 
@@ -18,23 +20,68 @@ class bandcampRawZip:
         - zip_path: Path to the .zip file
         - output_folder: Folder where extracted files will be saved
         """
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            zip_ref.extractall(output_folder)
-            logging.info("Files extracted to: " % output_folder)
+
+        logging.debug("Extracting %s to temporary file" % self.zip_path)
+
+        with zipfile.ZipFile(self.zip_path, 'r') as zip_ref:
+            zip_ref.extractall("temp")
 
 
     def create_album_folder(self):
 
-        filename = os.path.splitext(self.zip_path)[-2]
+        filename = os.path.basename(os.path.splitext(self.zip_path)[-2])
         artist = filename.split(" - ")[0]
         album = filename.split(" - ")[1]
 
-        library = os.listdir(self.lib_path)
+        # library = os.listdir(self.lib_path)
+        self.new_folder = os.path.join(self.lib_path, artist, album)
 
-        os.makedirs(os.path.join(library, artist, album))
+        logging.debug("Creating new folder %s" % self.new_folder)
+
+        try:
+            os.makedirs(self.new_folder)
+        except FileExistsError:
+            pass
 
 
+    def copy_and_rename(self):
 
+        logging.debug("Copying files...")
+
+        for item in os.listdir("temp"):
+
+            if os.path.splitext(item)[-1] in [".jpg", ".png"]:
+                shutil.copy2(item, os.path.join(self.new_folder, item))
+
+                logging.debug("Copying %s to %s" % (item, os.path.join(self.new_folder, item)))
+
+            elif os.path.splitext(item)[-1] == ".mp3":
+                """
+                Making a somewhat dangerous assumption here that I can use " - " as my delimiter. It may not work in all
+                cases. So, should this be put into a config?
+                """
+
+                first_delim = item.find(" - ")
+                second_delim = item.find(" - ", first_delim + 1)
+
+                name = item[second_delim+6:-4]
+                #os.rename()
+
+                shutil.copy2(os.path.join("temp", item), os.path.join(self.new_folder, name))
+
+                logging.debug("Copying %s to %s" % (item, os.path.join(self.new_folder, name)))
+
+    def cleanup(self):
+
+        shutil.rmtree("temp")
+        logging.debug("Removing temporary folder")
+
+
+    def processNewMusic(self):
+        self.extract_zip()
+        self.create_album_folder()
+        self.copy_and_rename()
+        self.cleanup()
 
 
 def collect_zips(path):
@@ -49,4 +96,6 @@ def collect_zips(path):
 
 if __name__ == "__main__":
 
-    bandcamp(
+    bcfolder = bandcampRawZip("E:\\Music\\Raw Compressed\\Gregory Alan Isakov - Appaloosa Bones.zip",
+                              "E:\\Music\\Albums")
+    bcfolder.processNewMusic()
