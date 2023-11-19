@@ -51,7 +51,7 @@ class bandcampRawZip:
         for item in os.listdir("temp"):
 
             if os.path.splitext(item)[-1] in [".jpg", ".png"]:
-                shutil.copy2(item, os.path.join(self.new_folder, item))
+                shutil.copy2(os.path.join("temp", item), os.path.join(self.new_folder, item))
 
                 logging.debug("Copying %s to %s" % (item, os.path.join(self.new_folder, item)))
 
@@ -64,7 +64,7 @@ class bandcampRawZip:
                 first_delim = item.find(" - ")
                 second_delim = item.find(" - ", first_delim + 1)
 
-                name = item[second_delim+6:-4]
+                name = item[second_delim+6:]
                 #os.rename()
 
                 shutil.copy2(os.path.join("temp", item), os.path.join(self.new_folder, name))
@@ -96,6 +96,6 @@ def collect_zips(path):
 
 if __name__ == "__main__":
 
-    bcfolder = bandcampRawZip("E:\\Music\\Raw Compressed\\Gregory Alan Isakov - Appaloosa Bones.zip",
-                              "E:\\Music\\Albums")
+    bcfolder = bandcampRawZip("E:\Music\Raw Compressed\Spoon - Memory Dust EP.zip",
+                              "E:\\Music\\Albums\\")
     bcfolder.processNewMusic()
