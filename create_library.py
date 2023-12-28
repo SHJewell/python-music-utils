@@ -21,9 +21,9 @@ class musicLibrary:
 
     def __init__(self, path: str):
         self.basePath = path
-        self.raw_lib = dict
-        self.possible_duplicates = dict
-        self.short_rounds = dict
+        self.raw_lib = dict()
+        self.possible_duplicates = dict()
+        self.short_rounds = dict()
 
 
     def _findMP3s(self, root, files):
@@ -57,8 +57,15 @@ class musicLibrary:
             else:
                 return False
         except Exception as e:
-            print(e)
-            return
+            logger.error("Bad extraction in %s", file_path, exc_info=e)
+            return {
+                "Artist": "",
+                "Album": "",
+                "Title": "",
+                "Length (seconds)": "",
+                "Format": file_extension,
+                "Path": file_path
+            }
 
         aat = []
 
@@ -66,20 +73,24 @@ class musicLibrary:
         for n, attr in enumerate(["artist", "album", "title"]):
 
             try:
-                aat.append(audio.get(switch.get(attr)[0], 'Unknown Artist').text[0] if file_extension == '.mp3' else \
-                    audio.get(switch.get(attr)[1], ['Unknown Artist'])[0])
-            except AttributeError:
-                aat.append(audio.get(switch.get(attr)[0], 'Unknown Artist')[0] if file_extension == '.mp3' else \
-                    audio.get(switch.get(attr)[1], ['Unknown Artist'])[0])
+                aat.append(audio.get(switch.get(attr)[0], "Unknown Artist").text[0] if file_extension == ".mp3" else \
+                    audio.get(switch.get(attr)[1], ["Unknown Artist"])[0])
+            except AttributeError as e:
+                logger.error("Bad extraction in %s", file_path)
+                logger.error("Trying without casting to string")
+                logging.error("%s", exc_info=e)
+                aat.append(audio.get(switch.get(attr)[0], "Unknown Artist")[0] if file_extension == ".mp3" else \
+                    audio.get(switch.get(attr)[1], ["Unknown Artist"])[0])
 
         length = str(int(audio.info.length))  # Length in seconds
 
         return {
-            'Artist': aat[0],
-            'Album': aat[1],
-            'Title': aat[2],
-            'Length (seconds)': length,
-            'Format': file_extension
+            "Artist": aat[0],
+            "Album": aat[1],
+            "Title": aat[2],
+            "Length (seconds)": length,
+            "Format": file_extension,
+            "Path": file_path
         }
 
     def genNewLib(self):
@@ -91,7 +102,7 @@ class musicLibrary:
             if not files:
                 continue
 
-            print(root)
+            logger.info(root)
 
             for file in files:
                 meta = self.get_metadata(os.path.join(root, file))
@@ -99,10 +110,10 @@ class musicLibrary:
                 if meta:
                     meta["Path"] = os.path.join(root, file)
 
-                self.raw_lib[str(idno).zfill(6)]
-                idno += 1
+                    self.raw_lib[str(idno).zfill(6)] = meta
+                    idno += 1
 
-        with open("master_lib.yml") as yml:
+        with open("master_lib.yml", "w") as yml:
             yaml.dump(self.raw_lib, yml)
 
 
@@ -110,5 +121,23 @@ class musicLibrary:
 
 if __name__ == "__main__":
 
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+
+    file_handler = logging.FileHandler('create_library_error.log')
+    file_handler.setLevel(logging.ERROR)
+
+    # Create formatter and add it to the handlers
+    formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%Y-%m-%d')
+    console_handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
+
+    # Add the handlers to the logger
+    logger.addHandler(console_handler)
+    logger.addHandler(file_handler)
+
     mylib = musicLibrary(r"E:\Music\Albums")
-    mylib.main_loop()
+    mylib.genNewLib()
