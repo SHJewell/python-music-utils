@@ -35,10 +35,6 @@ class musicLibrary:
 
 
     def get_metadata(self, file_path):
-        """
-        TODO:
-            Log error messages caught by try-except
-        """
 
         switch = {"artist": ['TPE1', 'ARTIST'],
                   "album":  ['TALB', 'ALBUM'],
