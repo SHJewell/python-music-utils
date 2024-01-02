@@ -53,7 +53,7 @@ class musicLibrary:
             else:
                 return False
         except Exception as e:
-            logger.error("Bad extraction in %s", file_path, exc_info=e)
+            logging.error("Bad extraction in %s", file_path, exc_info=e)
             return {
                 "Artist": "",
                 "Album": "",
@@ -72,8 +72,8 @@ class musicLibrary:
                 aat.append(audio.get(switch.get(attr)[0], "Unknown Artist").text[0] if file_extension == ".mp3" else \
                     audio.get(switch.get(attr)[1], ["Unknown Artist"])[0])
             except AttributeError as e:
-                logger.error("Bad extraction in %s", file_path)
-                logger.error("Trying without casting to string")
+                logging.error("Bad extraction in %s", file_path)
+                logging.error("Trying without casting to string")
                 logging.error("%s", exc_info=e)
                 aat.append(audio.get(switch.get(attr)[0], "Unknown Artist")[0] if file_extension == ".mp3" else \
                     audio.get(switch.get(attr)[1], ["Unknown Artist"])[0])
@@ -112,28 +112,79 @@ class musicLibrary:
         with open("master_lib.yml", "w") as yml:
             yaml.dump(self.raw_lib, yml)
 
+    def importLib(self, path):
+
+        with open(path, "r") as file:
+            yaml.safe_dump(self.raw_lib, file)
+
+
+    def convert_m3u_to_m3u8(self, m3u_path, m3u8_path):
+
+        def find_nth_instance(string):
+            count = 0
+            for i, c in enumerate(string):
+                if c == "\\":
+                    count += 1
+                    if count == 3:
+                        return i
+            return -1 + 1
+
+        with open(m3u_path, 'r') as m3u_file, open(m3u8_path, 'w', encoding='utf-8') as m3u8_file:
+            m3u8_file.write('#EXTM3U\n')
+
+            for line in m3u_file:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+
+                filepath = line[find_nth_instance(line):]
+                if not os.path.isabs(filepath):  # if the path is not absolute
+                    filepath = os.path.join(os.path.dirname(m3u_path), filepath)
+
+                try:
+                    audio = MP3(line)
+                    duration = int(audio.info.length)
+                    m3u8_file.write(f'#EXTINF:{duration},{audio["TIT2"][0]}\n')
+                    m3u8_file.write(f'{filepath[1:]}\n')
+                except Exception as e:
+                    if e == "TIT2":
+                        m3u8_file.write(f'#EXTINF:{duration},{os.path.splitext(os.path.basename(filepath))[0]}\n')
+                        m3u8_file.write(f'{filepath[1:]}\n')
+                        continue
+                    print(f"Error processing {line}: {e}")
+
 
 
 
 if __name__ == "__main__":
 
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
 
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
 
-    file_handler = logging.FileHandler('create_library_error.log')
-    file_handler.setLevel(logging.ERROR)
 
-    # Create formatter and add it to the handlers
-    formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%Y-%m-%d')
-    console_handler.setFormatter(formatter)
-    file_handler.setFormatter(formatter)
 
-    # Add the handlers to the logger
-    logger.addHandler(console_handler)
-    logger.addHandler(file_handler)
-
+    # logger = logging.getLogger(__name__)
+    # logger.setLevel(logging.DEBUG)
+    #
+    # console_handler = logging.StreamHandler()
+    # console_handler.setLevel(logging.INFO)
+    #
+    # file_handler = logging.FileHandler('create_library_error.log')
+    # file_handler.setLevel(logging.ERROR)
+    #
+    # # Create formatter and add it to the handlers
+    # formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%Y-%m-%d')
+    # console_handler.setFormatter(formatter)
+    # file_handler.setFormatter(formatter)
+    #
+    # # Add the handlers to the logger
+    # logger.addHandler(console_handler)
+    # logger.addHandler(file_handler)
+    #
     mylib = musicLibrary(r"E:\Music\Albums")
-    mylib.genNewLib()
+    # mylib.genNewLib()
+
+    for file in os.listdir(r"E:\Music\Playlists"):
+        if ".m3u" not in file:
+            continue
+        mylib.convert_m3u_to_m3u8(f"E:\\Music\\Playlists\\{file}",
+                                 f"E:\\Music\\Playlists\\For Mobile\\{os.path.splitext(file)[0]}.m3u8")
