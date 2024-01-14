@@ -7,6 +7,16 @@ from mutagen import File
 import os
 import yaml
 import logging
+import pandas as pd
+
+
+def mobilize_playlists(mylib):
+
+    for file in os.listdir(r"E:\Music\Playlists"):
+        if ".m3u" not in file:
+            continue
+        mylib.convert_m3u_to_m3u8(f"E:\\Music\\Playlists\\{file}",
+                                  f"E:\\Music\\Playlists\\For Mobile\\{os.path.splitext(file)[0]}.m3u8")
 
 
 def normalize_name(file_name):
@@ -24,14 +34,7 @@ class musicLibrary:
         self.raw_lib = dict()
         self.possible_duplicates = dict()
         self.short_rounds = dict()
-
-
-    def _findMP3s(self, root, files):
-
-        for file in files:
-
-            if ".mp3" in file:
-                self.raw_lib[f"{root}"]
+        self.lib_df = pd.DataFrame
 
 
     def get_metadata(self, file_path):
@@ -98,7 +101,7 @@ class musicLibrary:
             if not files:
                 continue
 
-            logger.info(root)
+            logging.info(root)
 
             for file in files:
                 meta = self.get_metadata(os.path.join(root, file))
@@ -112,10 +115,11 @@ class musicLibrary:
         with open("master_lib.yml", "w") as yml:
             yaml.dump(self.raw_lib, yml)
 
+
     def importLib(self, path):
 
         with open(path, "r") as file:
-            yaml.safe_dump(self.raw_lib, file)
+            self.raw_lib = yaml.safe_load(file)
 
 
     def convert_m3u_to_m3u8(self, m3u_path, m3u8_path):
@@ -154,37 +158,51 @@ class musicLibrary:
                     print(f"Error processing {line}: {e}")
 
 
+    def pandizeLib(self):
+
+        self.lib_df = pd.DataFrame(self.raw_lib).T
+
+
+    def preprocessName(self):
+
+        for track in self.raw_lib:
+
+            pass
+
+
+    def _findMP3s(self, root, files):
+
+        for file in files:
+
+            if ".mp3" in file:
+                self.raw_lib[f"{root}"]
 
 
 if __name__ == "__main__":
 
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
 
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
 
+    file_handler = logging.FileHandler('create_library_error.log')
+    file_handler.setLevel(logging.ERROR)
 
+    # Create formatter and add it to the handlers
+    formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%Y-%m-%d')
+    console_handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
 
-    # logger = logging.getLogger(__name__)
-    # logger.setLevel(logging.DEBUG)
-    #
-    # console_handler = logging.StreamHandler()
-    # console_handler.setLevel(logging.INFO)
-    #
-    # file_handler = logging.FileHandler('create_library_error.log')
-    # file_handler.setLevel(logging.ERROR)
-    #
-    # # Create formatter and add it to the handlers
-    # formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%Y-%m-%d')
-    # console_handler.setFormatter(formatter)
-    # file_handler.setFormatter(formatter)
-    #
-    # # Add the handlers to the logger
-    # logger.addHandler(console_handler)
-    # logger.addHandler(file_handler)
-    #
+    # Add the handlers to the logger
+    logger.addHandler(console_handler)
+    logger.addHandler(file_handler)
+
     mylib = musicLibrary(r"E:\Music\Albums")
+    mylib.importLib("master_lib.yml")
+    mylib.pandizeLib()
+
+    mylib.lib_df
     # mylib.genNewLib()
 
-    for file in os.listdir(r"E:\Music\Playlists"):
-        if ".m3u" not in file:
-            continue
-        mylib.convert_m3u_to_m3u8(f"E:\\Music\\Playlists\\{file}",
-                                 f"E:\\Music\\Playlists\\For Mobile\\{os.path.splitext(file)[0]}.m3u8")
+
