@@ -1,4 +1,4 @@
-import os
+
 import re
 from mutagen.mp3 import MP3
 from mutagen.wavpack import WavPack
@@ -199,8 +199,9 @@ if __name__ == "__main__":
     logger.addHandler(file_handler)
 
     mylib = musicLibrary(r"E:\Music\Albums")
-    mylib.importLib("master_lib.yml")
-    mylib.pandizeLib()
+    mobilize_playlists(mylib)
+    #mylib.importLib("master_lib.yml")
+    #mylib.pandizeLib()
 
     mylib.lib_df
     # mylib.genNewLib()

@@ -89,13 +89,22 @@ def collect_zips(path):
     files = []
 
     for file in os.listdir(path):
-        if os.path.splitext(file)[-1] == "zip":
-            files.append(file)
+        if file.endswith("zip"):
+            files.append(f"{path}\\{file}")
+
+    return files
+
+def batchProcess(path, library):
+
+    for file in collect_zips(path):
+        bcfolder = bandcampRawZip(file, library)
+        bcfolder.processNewMusic()
 
 
 
 if __name__ == "__main__":
 
-    bcfolder = bandcampRawZip("E:\Music\Raw Compressed\Spoon - Memory Dust EP.zip",
-                              "E:\\Music\\Albums\\")
-    bcfolder.processNewMusic()
+    batchProcess(r"E:\Music\Raw Compressed", r"E:\Music\Albums")
+    # bcfolder = bandcampRawZip(r"E:\Music\Raw Compressed\Andrew Bird - Sunday Morning Put-On.zip",
+    #                           "E:\\Music\\Albums\\")
+    # bcfolder.processNewMusic()
